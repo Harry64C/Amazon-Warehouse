@@ -298,7 +298,7 @@ import java.sql.ResultSet;
                     case 3: placeOrder(esql, authorisedUser); break;
                     case 4: viewRecentOrders(esql,authorisedUser); break;
                     case 5: updateProduct(esql,authorisedUser); break;
-                    case 6: viewRecentUpdates(esql); break;
+                    case 6: viewRecentUpdates(esql, authorisedUser); break;
                     case 7: viewPopularProducts(esql); break;
                     case 8: viewPopularCustomers(esql); break;
                     case 9: placeProductSupplyRequests(esql, authorisedUser); break;
@@ -616,7 +616,34 @@ import java.sql.ResultSet;
           System.err.println(e.getMessage());
        }
     }
-    public static void viewRecentUpdates(Amazon esql) {}
+
+
+    public static void viewRecentUpdates(Amazon esql, String user) {
+      List<List<String>> result;
+      String query;
+
+      try{
+         query = String.format("SELECT userID FROM Users WHERE name = '%s'",user);
+         result = esql.executeQueryAndReturnResult(query);
+         int managerID = Integer.parseInt(result.get(0).get(0));
+
+         System.out.println("Enter storeID:");
+         int storeID = Integer.parseInt(in.readLine());
+         query = String.format("SELECT managerID from Store WHERE storeID = %s",storeID);
+         result = esql.executeQueryAndReturnResult(query);
+         if (managerID != Integer.parseInt(result.get(0).get(0))){
+            System.out.println("You are not the Manager");
+            return;
+         }
+         // now select latest 5 updates
+         query = String.format("SELECT * FROM ProductUpdates WHERE storeID = '%s' ORDER BY updateNumber DESC LIMIT 5", storeID);
+         esql.executeQueryAndPrintResult(query);
+      } catch(Exception e){
+         System.err.println(e.getMessage());
+      }
+    }
+
+
     public static void viewPopularProducts(Amazon esql) {}
     public static void viewPopularCustomers(Amazon esql) {}
 

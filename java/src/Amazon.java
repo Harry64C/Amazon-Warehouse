@@ -29,6 +29,8 @@ import java.sql.ResultSet;
  import java.sql.Timestamp;
  import java.time.Instant;  
 
+import java.awt.*;
+import java.awt.event.*;
  /**
   * This class defines a simple embedded SQL utility class that is designed to
   * work with PostgreSQL JDBC drivers.
@@ -236,6 +238,7 @@ import java.sql.ResultSet;
      *
      * @param args the command line arguments this inclues the <mysql|pgsql> <login file>
      */
+    static boolean isManager = false;;
     public static void main (String[] args) {
        if (args.length != 3) {
           System.err.println (
@@ -275,6 +278,7 @@ import java.sql.ResultSet;
              }//end switch
              if (authorisedUser != null) {
                boolean usermenu = true;
+               isManagerFunc(esql, authorisedUser);
                while(usermenu) {
                  System.out.println("MAIN MENU");
                  System.out.println("---------");
@@ -284,12 +288,13 @@ import java.sql.ResultSet;
                  System.out.println("4. View 5 recent orders");
  
                  //the following functionalities basically used by managers
-                 System.out.println("5. Update Product");
-                 System.out.println("6. View 5 recent Product Updates Info");
-                 System.out.println("7. View 5 Popular Items");
-                 System.out.println("8. View 5 Popular Customers");
-                 System.out.println("9. Place Product Supply Request to Warehouse");
- 
+                 if(isManager){
+                  System.out.println("5. Update Product");
+                  System.out.println("6. View 5 recent Product Updates Info");
+                  System.out.println("7. View 5 Popular Items");
+                  System.out.println("8. View 5 Popular Customers");
+                  System.out.println("9. Place Product Supply Request to Warehouse");
+                 }
                  System.out.println(".........................");
                  System.out.println("20. Log out");
                  switch (readChoice()){
@@ -328,7 +333,7 @@ import java.sql.ResultSet;
     public static void Greeting(){
        System.out.println(
           "\n\n*******************************************************\n" +
-          "              User Interface      	               \n" +
+          "              Welcome to the Amazon WareHouse              \n" +
           "*******************************************************\n");
     }//end Greeting
  
@@ -377,7 +382,27 @@ import java.sql.ResultSet;
        }
     }//end CreateUser
  
- 
+    public static Void isManagerFunc(Amazon esql, String user){
+      List<List<String>> result;
+       try{
+          String query = String.format("SELECT userID, type FROM Users WHERE name = '%s'",user);
+          result = esql.executeQueryAndReturnResult(query);
+          List<String> usr = result.get(0);
+          String type = usr.get(1).trim();
+          if(!type.equalsIgnoreCase("manager")){
+             System.out.println("You are not a manager");
+             isManager = false;
+             return null;
+          }
+          else{
+            isManager = true;
+            return null;
+          }
+         }catch(Exception e){
+            System.err.println(e);
+         }
+         return null;
+    }
     /*
      * Check log in credentials for an existing user
      * @return User login or null is the user does not exist
@@ -409,20 +434,14 @@ import java.sql.ResultSet;
           String query = String.format("SELECT latitude, longitude FROM Users WHERE name = '%s'",user);
           result = esql.executeQueryAndReturnResult(query);
           List<String> coords = result.get(0);
-          // System.out.println("Lat:" + coords.get(0));
-          // System.out.println("Lon:" + coords.get(1));
-          query = String.format("SELECT * FROM Store");
+         //  System.out.println("Lat:" + coords.get(0));
+         //  System.out.println("Lon:" + coords.get(1));
+         //  query = String.format("SELECT * FROM Store");
           try{
-             result = esql.executeQueryAndReturnResult(query);
-             for(int i = 0; i < result.size(); i++){
-                List<String> storeCoords = result.get(i);
-                Double distance = esql.calculateDistance(Double.parseDouble(coords.get(0)), Double.parseDouble(coords.get(1)),Double.parseDouble(storeCoords.get(1)),Double.parseDouble(storeCoords.get(2)));
-                if(distance > 30){
-                   result.remove(i);
-                   i--;
-                }
-             }
-             System.out.println("Store Id \t latitude \t longitude \t  manager id \t date established");
+            query = String.format("SELECT * FROM Store WHERE storeID IN (SELECT s2.storeID FROM Store s2 GROUP BY s2.storeID HAVING  SQRT(POW((s2.latitude - %s), 2) + POW((s2.longitude - %s), 2)) < 30)",Double.parseDouble(coords.get(0)), Double.parseDouble(coords.get(1)));
+            result = esql.executeQueryAndReturnResult(query);
+
+            System.out.println("Store Id \t latitude \t longitude \t  manager id \t date established");
              for(int i = 0; i < result.size(); i++){
                 for(int j = 0; j < result.get(i).size(); j++){
                    System.out.print(result.get(i).get(j) + "\t\t");
@@ -515,13 +534,13 @@ import java.sql.ResultSet;
             System.out.println ("Order successfully created!");
 
             // now update the product table 
-            try{
-               query = String.format("UPDATE Product SET numberOfUnits = numberOfUnits - '%s' WHERE storeID = '%s' AND productName = '%s'", unitsOrdered, storeID, productName);
-               esql.executeUpdate(query);
-               System.out.println ("Store offerings updated");
-            }catch(Exception e){
-               System.err.println (e.getMessage ());
-            }
+            // try{
+            //    query = String.format("UPDATE Product SET numberOfUnits = numberOfUnits - '%s' WHERE storeID = '%s' AND productName = '%s'", unitsOrdered, storeID, productName);
+            //    esql.executeUpdate(query);
+            //    System.out.println ("Store offerings updated");
+            // }catch(Exception e){
+            //    System.err.println (e.getMessage ());
+            // }
          }catch(Exception e){
             System.err.println (e.getMessage ());
          }
@@ -555,8 +574,6 @@ import java.sql.ResultSet;
           String query = String.format("SELECT userID, type FROM Users WHERE name = '%s'",usr);
           result = esql.executeQueryAndReturnResult(query);
           List<String> user = result.get(0);
-          System.out.println(user.get(0));
-          System.out.println(user.get(1));
           String type = user.get(1).trim();
           if(!type.equalsIgnoreCase("manager")){
              System.out.println("You are not a manager");
@@ -607,8 +624,8 @@ import java.sql.ResultSet;
              esql.executeUpdate(query);
              // LocalDate date = LocalDate.now();
              Timestamp date = new Timestamp(System.currentTimeMillis());
-             query = String.format("INSERT INTO ProductUpdates (managerID, storeID, productName, updatedOn) VALUES (%s, %s, '%s', '%s')", user.get(0), storeid, pname, date);
-             esql.executeUpdate(query);
+            //  query = String.format("INSERT INTO ProductUpdates (managerID, storeID, productName, updatedOn) VALUES (%s, %s, '%s', '%s')", user.get(0), storeid, pname, date);
+            //  esql.executeUpdate(query);
           } catch(Exception e){
              System.err.println(e.getMessage());
           }
@@ -642,8 +659,7 @@ import java.sql.ResultSet;
          System.err.println(e.getMessage());
       }
     }
-
-
+    
     public static void viewPopularProducts(Amazon esql) {}
     public static void viewPopularCustomers(Amazon esql) {}
 
@@ -686,18 +702,17 @@ import java.sql.ResultSet;
             System.err.println (e.getMessage ());
          }
          // now update the product table 
-         try{
-            query = String.format("UPDATE Product SET numberOfUnits = numberOfUnits + '%s' WHERE storeID = '%s' AND productName = '%s'", unitsRequested, storeID, productName);
-            esql.executeUpdate(query);
-            System.out.println ("Store offerings updated");
-         }catch(Exception e){
-            System.err.println (e.getMessage ());
-         }
+         // try{
+         //    query = String.format("UPDATE Product SET numberOfUnits = numberOfUnits + '%s' WHERE storeID = '%s' AND productName = '%s'", unitsRequested, storeID, productName);
+         //    esql.executeUpdate(query);
+         //    System.out.println ("Store offerings updated");
+         // }catch(Exception e){
+         //    System.err.println (e.getMessage ());
+         // }
       } catch(Exception e){
          System.err.println(e.getMessage());
       }
     }
  
  }//end Amazon
- 
  

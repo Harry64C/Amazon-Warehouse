@@ -556,12 +556,12 @@ import java.awt.event.*;
           String query = String.format("SELECT userID, type FROM Users WHERE name = '%s'",usr);
           result = esql.executeQueryAndReturnResult(query);
           List<String> user = result.get(0);
-          if(user.get(1) == "manager" ){
-             query = String.format("SELECT o.orderNumber, u.name, store.storeID, o.productName, o.orderTime FROM Orders o, StoreId store, Users u WHERE store.storeID = o.storeID AND store.managerID = %s AND o.customerID = u.userID",user.get(0));
+          if(user.get(1).trim().equalsIgnoreCase("manager") ){
+             query = String.format("SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND s.managerID = %s AND o.customerID = u.userID ORDER BY o.orderTime DESC",user.get(0));
              int rows = esql.executeQueryAndPrintResult(query);
           }
-          else if (user.get(1) == "admin"){
-            query = "SELECT o.orderNumber, u.name, store.storeID, o.productName, o.orderTime FROM Orders o, StoreId store, Users u WHERE store.storeID = o.storeID AND o.customerID = u.userID";
+          else if (user.get(1).trim().equalsIgnoreCase("admin")){
+            query = "SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND o.customerID = u.userID ORDER BY o.orderTime DESC";
              int rows = esql.executeQueryAndPrintResult(query);
           }
           else{
@@ -592,7 +592,7 @@ import java.awt.event.*;
                 result = esql.executeQueryAndReturnResult(query);
                 if(!type.equalsIgnoreCase("admin") && Integer.parseInt(result.get(0).get(0)) != Integer.parseInt(user.get(0))){
                    System.out.println("You are not the Manager");
-                   return;
+                   continue;
                 }
                 else{
                    break;

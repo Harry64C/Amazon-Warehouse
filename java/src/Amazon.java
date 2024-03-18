@@ -507,13 +507,32 @@ import java.awt.event.*;
             }
 
             // get productName and unitsOrdered from User
-            System.out.print("\tEnter the name of the product you wish to purchase: ");
-            String productName = in.readLine();
+            // System.out.print("\tEnter the name of the product you wish to purchase: ");
+            // String productName = in.readLine();
+            String pname = "";
+            do{
+               try{
+                  System.out.println("What is the Product Name you purchase:");
+                  pname = in.readLine();
+                  query = String.format("Select productName FROM Product WHERE productName = '%s' AND storeID = %s", pname, storeID);
+                  int rows = esql.executeQuery(query);
+                  if(rows == 0){
+                     System.out.println("Product does not exist");
+                     continue;
+                  }
+                  else{
+                     break;
+                  }
+                  
+               } catch(Exception e){
+                  System.err.println(e.getMessage());
+               }
+            } while(true);
             System.out.print("\tEnter number of items: ");   
             String unitsOrdered = in.readLine();   
 
             // make sure the number of units ordered is possible
-            query = String.format("SELECT numberOfUnits FROM Product WHERE storeID = '%s' AND productName = '%s'", storeID, productName);
+            query = String.format("SELECT numberOfUnits FROM Product WHERE storeID = '%s' AND productName = '%s'", storeID, pname);
             result = esql.executeQueryAndReturnResult(query);
             int inStock = Integer.parseInt(result.get(0).get(0));
             while ((Integer.parseInt(unitsOrdered) > inStock) ||  (Integer.parseInt(unitsOrdered) < 1)) {
@@ -534,7 +553,7 @@ import java.awt.event.*;
             System.out.print("Your order number is " + orderNumber + "\n");
 
             // put it all together
-            query = String.format("INSERT INTO ORDERS (orderNumber, customerID, storeID, productName, unitsOrdered, orderTime) VALUES ('%s','%s', '%s', '%s','%s', '%s')", orderNumber, customerID, storeID, productName, unitsOrdered, orderTime);
+            query = String.format("INSERT INTO ORDERS (orderNumber, customerID, storeID, productName, unitsOrdered, orderTime) VALUES ('%s','%s', '%s', '%s','%s', '%s')", orderNumber, customerID, storeID, pname, unitsOrdered, orderTime);
             esql.executeUpdate(query);
             System.out.println ("Order successfully created!");
 
@@ -562,11 +581,11 @@ import java.awt.event.*;
           result = esql.executeQueryAndReturnResult(query);
           List<String> user = result.get(0);
           if(user.get(1).trim().equalsIgnoreCase("manager") ){
-             query = String.format("SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND s.managerID = %s AND o.customerID = u.userID ORDER BY o.orderTime DESC",user.get(0));
+             query = String.format("SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND s.managerID = %s AND o.customerID = u.userID ORDER BY o.orderTime DESC LIMIT 5",user.get(0));
              int rows = esql.executeQueryAndPrintResult(query);
           }
           else if (user.get(1).trim().equalsIgnoreCase("admin")){
-            query = "SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND o.customerID = u.userID ORDER BY o.orderTime DESC";
+            query = "SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND o.customerID = u.userID ORDER BY o.orderTime DESC LIMIT 5";
              int rows = esql.executeQueryAndPrintResult(query);
           }
           else{
@@ -625,11 +644,29 @@ import java.awt.event.*;
                 System.err.println(e.getMessage());
              }
           } while(true);
+          int numofUnits;
+          float newPrice;
+          do{
+            try{
+               System.out.println("new number of units:");
+               numofUnits = Integer.parseInt(in.readLine());
+               if(numofUnits < 0){
+                  System.out.println("Error number of product cannot be less then 0");
+                  continue;
+               }
+               System.out.println("new Price:");
+              newPrice = Float.parseFloat(in.readLine());
+              if(newPrice < 0){
+               System.out.println("Error: price cannot be less then 0");
+               continue;
+              }
+              break;
+            } catch(Exception e){
+               System.out.println("number of units or price has to be a number");
+               continue;
+            }
+          } while(true);
           try{
-             System.out.println("new number of units:");
-             int numofUnits = Integer.parseInt(in.readLine());
-             System.out.println("new Price:");
-             float newPrice = Float.parseFloat(in.readLine());
              query = String.format("UPDATE Product SET numberOfUnits = %s, pricePerUnit = %s WHERE storeID = %s AND productName = '%s'", numofUnits, newPrice, storeid, pname);
              esql.executeUpdate(query);
           } catch(Exception e){
@@ -682,6 +719,10 @@ import java.awt.event.*;
 
     
     public static void viewPopularProducts(Amazon esql, String user) {
+      if(!isManager){
+         System.out.println("You are not a manager");
+         return;
+      }
       List<List<String>> result;
       String query;
       try{
@@ -715,6 +756,10 @@ import java.awt.event.*;
     }
 
     public static void viewPopularCustomers(Amazon esql, String user) {
+      if(!isManager){
+         System.out.println("You are not a manager");
+         return;
+      }
       List<List<String>> result;
       String query;
       try{
@@ -751,7 +796,10 @@ import java.awt.event.*;
     public static void placeProductSupplyRequests(Amazon esql, String user) {
       List<List<String>> result;
       String query;
-
+      if(!isManager){
+         System.out.println("You are not a manager");
+         return;
+      }
       try{
          query = String.format("SELECT userID,type FROM Users WHERE name = '%s'",user);
          result = esql.executeQueryAndReturnResult(query);
@@ -771,9 +819,19 @@ import java.awt.event.*;
          String productName = in.readLine();
          System.out.print("\tEnter number of units needed: ");
          String unitsRequested = in.readLine();
-         System.out.print("\tEnter warehouse ID: ");
-         String warehouseID = in.readLine();
-
+         String warehouseID = "";
+         do{
+            System.out.print("\tEnter warehouse ID: ");
+            warehouseID = in.readLine();
+            query = String.format("SELECT warehouseID FROM Warehouse WHERE warehouseID = '%s'", warehouseID);
+            List<List<String>> rows = esql.executeQueryAndReturnResult(query);
+            if(rows.size() == 0){
+               continue;
+            }
+            else{
+               break;
+            }
+         } while(true);
          // get the order number (increments each time)
          query = String.format("SELECT COUNT(*)+1 FROM ProductSupplyRequests");
          result = esql.executeQueryAndReturnResult(query);

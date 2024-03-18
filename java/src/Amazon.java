@@ -556,11 +556,11 @@ import java.awt.event.*;
           String query = String.format("SELECT userID, type FROM Users WHERE name = '%s'",usr);
           result = esql.executeQueryAndReturnResult(query);
           List<String> user = result.get(0);
-          if(user.get(1) == "Manager" ){
+          if(user.get(1) == "manager" ){
              query = String.format("SELECT o.orderNumber, u.name, store.storeID, o.productName, o.orderTime FROM Orders o, StoreId store, Users u WHERE store.storeID = o.storeID AND store.managerID = %s AND o.customerID = u.userID",user.get(0));
              int rows = esql.executeQueryAndPrintResult(query);
           }
-          else if (user.get(1) == "Admin"){
+          else if (user.get(1) == "admin"){
             query = "SELECT o.orderNumber, u.name, store.storeID, o.productName, o.orderTime FROM Orders o, StoreId store, Users u WHERE store.storeID = o.storeID AND o.customerID = u.userID";
              int rows = esql.executeQueryAndPrintResult(query);
           }

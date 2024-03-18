@@ -304,8 +304,8 @@ import java.awt.event.*;
                     case 4: viewRecentOrders(esql,authorisedUser); break;
                     case 5: updateProduct(esql,authorisedUser); break;
                     case 6: viewRecentUpdates(esql, authorisedUser); break;
-                    case 7: viewPopularProducts(esql); break;
-                    case 8: viewPopularCustomers(esql); break;
+                    case 7: viewPopularProducts(esql, authorisedUser); break;
+                    case 8: viewPopularCustomers(esql, authorisedUser); break;
                     case 9: placeProductSupplyRequests(esql, authorisedUser); break;
  
                     case 20: usermenu = false; break;
@@ -493,6 +493,11 @@ import java.awt.event.*;
             // make sure store is within 30 miles
             query = String.format("SELECT latitude, longitude FROM Store WHERE storeID = %s", storeID);
             result = esql.executeQueryAndReturnResult(query);
+
+            if(result.isEmpty()){
+               System.out.println ("Store does not exist!");
+               return;
+            }
             List<String> storeCoords = result.get(0);
 
             Double distance = esql.calculateDistance(Double.parseDouble(coords.get(0)), Double.parseDouble(coords.get(1)),Double.parseDouble(storeCoords.get(0)),Double.parseDouble(storeCoords.get(1)));
@@ -673,8 +678,75 @@ import java.awt.event.*;
          System.err.println(e.getMessage());
       }
     }
-    public static void viewPopularProducts(Amazon esql) {}
-    public static void viewPopularCustomers(Amazon esql) {}
+
+
+    
+    public static void viewPopularProducts(Amazon esql, String user) {
+      List<List<String>> result;
+      String query;
+      try{
+         System.out.println ("------------------------------------");
+         System.out.println("\tMost Popular Items");
+         System.out.println ("------------------------------------");
+
+         query = String.format("SELECT userID FROM Users WHERE name = '%s'",user);
+         result = esql.executeQueryAndReturnResult(query);
+         String managerID = result.get(0).get(0);
+
+         query = String.format("Select COUNT(storeID) FROM Store WHERE managerID = '%s'", managerID);
+         result = esql.executeQueryAndReturnResult(query);
+         int numOfStores = Integer.parseInt(result.get(0).get(0));
+         //System.out.println(numOfStores);
+
+         query = String.format("Select storeID FROM Store WHERE managerID = '%s'", managerID);
+         result = esql.executeQueryAndReturnResult(query);
+
+         for(int i = 0; i < numOfStores; i++) {
+            int storeID = Integer.parseInt(result.get(i).get(0));
+            System.out.println("\tFor store " + storeID + ":");
+
+            query = String.format("SELECT productName FROM Orders WHERE storeID = '%s' ORDER BY unitsOrdered DESC LIMIT 5", storeID);
+            esql.executeQueryAndPrintResult(query);
+         }
+         System.out.println ("------------------------------------");
+      }catch(Exception e){
+         System.err.println (e.getMessage ());
+      }
+    }
+
+    public static void viewPopularCustomers(Amazon esql, String user) {
+      List<List<String>> result;
+      String query;
+      try{
+         System.out.println ("------------------------------------");
+         System.out.println("\tTop 5 Customers");
+         System.out.println ("------------------------------------");
+
+         query = String.format("SELECT userID FROM Users WHERE name = '%s'",user);
+         result = esql.executeQueryAndReturnResult(query);
+         String managerID = result.get(0).get(0);
+
+         query = String.format("Select COUNT(storeID) FROM Store WHERE managerID = '%s'", managerID);
+         result = esql.executeQueryAndReturnResult(query);
+         int numOfStores = Integer.parseInt(result.get(0).get(0));
+         //System.out.println(numOfStores);
+
+         query = String.format("Select storeID FROM Store WHERE managerID = '%s'", managerID);
+         result = esql.executeQueryAndReturnResult(query);
+
+         for(int i = 0; i < numOfStores; i++) {
+            int storeID = Integer.parseInt(result.get(i).get(0));
+            System.out.println("\tFor store " + storeID + ":");
+            
+            query = String.format("SELECT name FROM users U, (SELECT customerID, SUM(unitsOrdered) AS x FROM Orders WHERE storeID = '%s' GROUP BY customerID ORDER BY x DESC LIMIT 5) AS top5 WHERE U.userID = top5.customerID", storeID);
+            esql.executeQueryAndPrintResult(query);
+         }
+         System.out.println ("------------------------------------");
+      }catch(Exception e){
+         System.err.println (e.getMessage ());
+      }
+    }
+
 
     public static void placeProductSupplyRequests(Amazon esql, String user) {
       List<List<String>> result;

@@ -562,11 +562,11 @@ import java.awt.event.*;
           result = esql.executeQueryAndReturnResult(query);
           List<String> user = result.get(0);
           if(user.get(1).trim().equalsIgnoreCase("manager") ){
-             query = String.format("SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND s.managerID = %s AND o.customerID = u.userID ORDER BY o.orderTime DESC",user.get(0));
+             query = String.format("SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND s.managerID = %s AND o.customerID = u.userID ORDER BY o.orderTime DESC LIMIT 5",user.get(0));
              int rows = esql.executeQueryAndPrintResult(query);
           }
           else if (user.get(1).trim().equalsIgnoreCase("admin")){
-            query = "SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND o.customerID = u.userID ORDER BY o.orderTime DESC";
+            query = "SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND o.customerID = u.userID ORDER BY o.orderTime DESC LIMIT 5";
              int rows = esql.executeQueryAndPrintResult(query);
           }
           else{
@@ -771,9 +771,19 @@ import java.awt.event.*;
          String productName = in.readLine();
          System.out.print("\tEnter number of units needed: ");
          String unitsRequested = in.readLine();
-         System.out.print("\tEnter warehouse ID: ");
-         String warehouseID = in.readLine();
-
+         String warehouseID = "";
+         do{
+            System.out.print("\tEnter warehouse ID: ");
+            warehouseID = in.readLine();
+            query = String.format("SELECT warehouseID FROM Warehouse WHERE warehouseID = '%s'", warehouseID);
+            List<List<String>> rows = esql.executeQueryAndReturnResult(query);
+            if(rows.size() == 0){
+               continue;
+            }
+            else{
+               break;
+            }
+         } while(true);
          // get the order number (increments each time)
          query = String.format("SELECT COUNT(*)+1 FROM ProductSupplyRequests");
          result = esql.executeQueryAndReturnResult(query);

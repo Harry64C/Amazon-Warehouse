@@ -389,7 +389,7 @@ import java.awt.event.*;
           result = esql.executeQueryAndReturnResult(query);
           List<String> usr = result.get(0);
           String type = usr.get(1).trim();
-          if(!type.equalsIgnoreCase("manager")){
+          if(!type.equalsIgnoreCase("manager") && !type.equalsIgnoreCase("admin")){
              System.out.println("You are not a manager");
              isManager = false;
              return null;
@@ -556,7 +556,7 @@ import java.awt.event.*;
           String query = String.format("SELECT userID, type FROM Users WHERE name = '%s'",usr);
           result = esql.executeQueryAndReturnResult(query);
           List<String> user = result.get(0);
-          if(user.get(1) == "Manager"){
+          if(user.get(1) == "Manager" || user.get(1) == "Admin"){
              query = String.format("SELECT o.orderNumber, u.name, store.storeID, o.productName, o.orderTime FROM Orders o, StoreId store, Users u WHERE store.storeID = o.storeID AND store.managerID = %s AND o.customerID = u.userID",user.get(0));
              int rows = esql.executeQueryAndPrintResult(query);
           }
@@ -575,8 +575,8 @@ import java.awt.event.*;
           result = esql.executeQueryAndReturnResult(query);
           List<String> user = result.get(0);
           String type = user.get(1).trim();
-          if(!type.equalsIgnoreCase("manager")){
-             System.out.println("You are not a manager");
+          if(!type.equalsIgnoreCase("manager") && !type.equalsIgnoreCase("admin")){
+             System.out.println("You are not a manager or an admin");
              return;
           }
           int storeid = 0;
@@ -586,7 +586,7 @@ import java.awt.event.*;
                 storeid = Integer.parseInt(in.readLine());
                 query = String.format("SELECT managerID from Store WHERE storeID = %s",storeid);
                 result = esql.executeQueryAndReturnResult(query);
-                if(Integer.parseInt(result.get(0).get(0)) != Integer.parseInt(user.get(0))){
+                if(!type.equalsIgnoreCase("admin") && Integer.parseInt(result.get(0).get(0)) != Integer.parseInt(user.get(0))){
                    System.out.println("You are not the Manager");
                    return;
                 }
@@ -611,6 +611,7 @@ import java.awt.event.*;
                 else{
                    break;
                 }
+                
              } catch(Exception e){
                 System.err.println(e.getMessage());
              }
@@ -622,10 +623,6 @@ import java.awt.event.*;
              float newPrice = Float.parseFloat(in.readLine());
              query = String.format("UPDATE Product SET numberOfUnits = %s, pricePerUnit = %s WHERE storeID = %s AND productName = '%s'", numofUnits, newPrice, storeid, pname);
              esql.executeUpdate(query);
-             // LocalDate date = LocalDate.now();
-             Timestamp date = new Timestamp(System.currentTimeMillis());
-            //  query = String.format("INSERT INTO ProductUpdates (managerID, storeID, productName, updatedOn) VALUES (%s, %s, '%s', '%s')", user.get(0), storeid, pname, date);
-            //  esql.executeUpdate(query);
           } catch(Exception e){
              System.err.println(e.getMessage());
           }
@@ -640,17 +637,30 @@ import java.awt.event.*;
       String query;
 
       try{
-         query = String.format("SELECT userID FROM Users WHERE name = '%s'",user);
+         query = String.format("SELECT userID, type FROM Users WHERE name = '%s'",user);
          result = esql.executeQueryAndReturnResult(query);
          int managerID = Integer.parseInt(result.get(0).get(0));
-
+         String type = result.get(0).get(1).trim();
+         if(!type.equalsIgnoreCase("admin")){
+               if(!type.equalsIgnoreCase("manager")){
+               System.out.println(result.get(0).get(1));
+               System.out.println("You are not the Manager");
+               return;
+            }
+         }
          System.out.println("Enter storeID:");
          int storeID = Integer.parseInt(in.readLine());
          query = String.format("SELECT managerID from Store WHERE storeID = %s",storeID);
          result = esql.executeQueryAndReturnResult(query);
-         if (managerID != Integer.parseInt(result.get(0).get(0))){
-            System.out.println("You are not the Manager");
-            return;
+         // if (managerID != Integer.parseInt(result.get(0).get(0)) && !result.get(0).get(1).equalsIgnoreCase("admin")){
+         //    System.out.println("You are not the Manager");
+         //    return;
+         // }
+         if(!type.equalsIgnoreCase("admin")){
+            if( managerID != Integer.parseInt(result.get(0).get(0)) ){
+               System.out.println("You are not the Manager");
+               return;
+            }
          }
          // now select latest 5 updates
          query = String.format("SELECT * FROM ProductUpdates WHERE storeID = '%s' ORDER BY updateNumber DESC LIMIT 5", storeID);
@@ -659,7 +669,6 @@ import java.awt.event.*;
          System.err.println(e.getMessage());
       }
     }
-    
     public static void viewPopularProducts(Amazon esql) {}
     public static void viewPopularCustomers(Amazon esql) {}
 
@@ -668,17 +677,19 @@ import java.awt.event.*;
       String query;
 
       try{
-         query = String.format("SELECT userID FROM Users WHERE name = '%s'",user);
+         query = String.format("SELECT userID,type FROM Users WHERE name = '%s'",user);
          result = esql.executeQueryAndReturnResult(query);
          int managerID = Integer.parseInt(result.get(0).get(0));
-
+         String type = result.get(0).get(1).trim();
          System.out.println("Enter storeID:");
          int storeID = Integer.parseInt(in.readLine());
          query = String.format("SELECT managerID from Store WHERE storeID = %s",storeID);
          result = esql.executeQueryAndReturnResult(query);
-         if (managerID != Integer.parseInt(result.get(0).get(0))){
-            System.out.println("You are not the Manager");
-            return;
+         if(!type.equalsIgnoreCase("admin")){
+            if (managerID != Integer.parseInt(result.get(0).get(0))){
+               System.out.println("You are not the Manager");
+               return;
+            }
          }
          System.out.print("\tEnter product name: ");
          String productName = in.readLine();

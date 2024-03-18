@@ -390,7 +390,6 @@ import java.awt.event.*;
           List<String> usr = result.get(0);
           String type = usr.get(1).trim();
           if(!type.equalsIgnoreCase("manager") && !type.equalsIgnoreCase("admin")){
-             System.out.println("You are not a manager");
              isManager = false;
              return null;
           }
@@ -434,11 +433,12 @@ import java.awt.event.*;
           String query = String.format("SELECT latitude, longitude FROM Users WHERE name = '%s'",user);
           result = esql.executeQueryAndReturnResult(query);
           List<String> coords = result.get(0);
-         //  System.out.println("Lat:" + coords.get(0));
-         //  System.out.println("Lon:" + coords.get(1));
-         //  query = String.format("SELECT * FROM Store");
           try{
-            query = String.format("SELECT * FROM Store WHERE storeID IN (SELECT s2.storeID FROM Store s2 GROUP BY s2.storeID HAVING  SQRT(POW((s2.latitude - %s), 2) + POW((s2.longitude - %s), 2)) < 30)",Double.parseDouble(coords.get(0)), Double.parseDouble(coords.get(1)));
+            query = String.format("SELECT * FROM Store " + 
+            "WHERE storeID IN "+
+            "(SELECT s2.storeID FROM Store s2 " + 
+            "GROUP BY s2.storeID HAVING" + 
+            "  SQRT(POW((s2.latitude - %s), 2) + POW((s2.longitude - %s), 2)) < 30)",Double.parseDouble(coords.get(0)), Double.parseDouble(coords.get(1)));
             result = esql.executeQueryAndReturnResult(query);
 
             System.out.println("Store Id \t latitude \t longitude \t  manager id \t date established");
@@ -556,8 +556,12 @@ import java.awt.event.*;
           String query = String.format("SELECT userID, type FROM Users WHERE name = '%s'",usr);
           result = esql.executeQueryAndReturnResult(query);
           List<String> user = result.get(0);
-          if(user.get(1) == "Manager" || user.get(1) == "Admin"){
-             query = String.format("SELECT o.orderNumber, u.name, store.storeID, o.productName, o.orderTime FROM Orders o, StoreId store, Users u WHERE store.storeID = o.storeID AND store.managerID = %s AND o.customerID = u.userID",user.get(0));
+          if(user.get(1).trim().equalsIgnoreCase("manager") ){
+             query = String.format("SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND s.managerID = %s AND o.customerID = u.userID ORDER BY o.orderTime DESC",user.get(0));
+             int rows = esql.executeQueryAndPrintResult(query);
+          }
+          else if (user.get(1).trim().equalsIgnoreCase("admin")){
+            query = "SELECT o.orderNumber, u.name, s.storeID, o.productName, o.orderTime FROM Orders o, Store s, Users u WHERE s.storeID = o.storeID AND o.customerID = u.userID ORDER BY o.orderTime DESC";
              int rows = esql.executeQueryAndPrintResult(query);
           }
           else{
@@ -588,7 +592,7 @@ import java.awt.event.*;
                 result = esql.executeQueryAndReturnResult(query);
                 if(!type.equalsIgnoreCase("admin") && Integer.parseInt(result.get(0).get(0)) != Integer.parseInt(user.get(0))){
                    System.out.println("You are not the Manager");
-                   return;
+                   continue;
                 }
                 else{
                    break;
